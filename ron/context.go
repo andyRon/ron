@@ -15,6 +15,7 @@ type Context struct {
 	Path       string
 	Method     string
 	StatusCode int
+	Params     map[string]string
 }
 
 // Context的构造器
@@ -69,4 +70,9 @@ func (c *Context) Query(key string) string {
 func (c *Context) Data(code int, data []byte) {
 	c.Status(code)
 	c.W.Write(data)
+}
+
+func (c *Context) Param(key string) string {
+	value, _ := c.Params[key]
+	return value
 }

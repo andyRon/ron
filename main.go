@@ -24,5 +24,9 @@ func main() {
 		})
 	})
 
+	r.GET("/assets/*filepath", func(c *ron.Context) {
+		c.JSON(http.StatusOK, ron.H{"filepath": c.Param("filepath")})
+	})
+
 	r.Run(":9999")
 }
