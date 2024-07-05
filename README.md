@@ -1,5 +1,9 @@
-Go语言Web框架
----
+
+
+## Go语言Web框架ron
+
+
+https://geektutu.com/post/gee.html
 
 
 
@@ -28,8 +32,6 @@ Go语言Web框架
 
 
 
-
-
 ```
 curl "http://localhost:9999/login" -X POST -d 'username=geektutu&password=1234'
 ```
@@ -49,3 +51,8 @@ curl "http://localhost:9999/login" -X POST -d 'username=geektutu&password=1234'
 动态路由有很多种实现方式，支持的规则、性能等有很大的差异。例如开源的路由实现`gorouter`支持在路由规则中嵌入正则表达式，例如`/p/[0-9A-Za-z]+`，即路径中的参数仅匹配数字和字母；另一个开源实现`httprouter`就不支持正则表达式。著名的Web开源框架`gin` 在早期的版本，并没有实现自己的路由，而是直接使用了`httprouter`，后来不知道什么原因，放弃了`httprouter`，自己实现了一个版本。
 
 实现动态路由最常用的数据结构，被称为**==前缀树(Trie树)==**：每一个节点的所有的子节点都拥有相同的前缀。
+
+
+
+
+
