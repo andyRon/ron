@@ -1,11 +1,10 @@
+Go语言从零实现
+---
+
+参考：https://geektutu.com/post/gee.html
 
 
-## Go语言Web框架ron-web
-
-
-https://geektutu.com/post/gee.html
-
-
+## 1 Web框架ron-web
 
 在设计一个框架之前，需要回答框架核心解决了什么问题。
 
@@ -119,7 +118,7 @@ curl "http://localhost:9999/login" -X POST -d 'username=geektutu&password=1234'
 
 
 
-## 分布式缓存ron-cache
+## 2 分布式缓存ron-cache
 
 > 商业世界里，现金为王；架构世界里，缓存为王。
 
@@ -147,5 +146,37 @@ curl "http://localhost:9999/login" -X POST -d 'username=geektutu&password=1234'
 
 
 
-###  LRU缓存淘汰策略
+### LRU缓存淘汰策略
+
+
+
+
+
+### 单机并发缓存
+
+
+
+
+
+### HTTP服务端
+
+
+
+分布式缓存需要实现节点间通信，建立基于 HTTP 的通信机制是比较常见和简单的做法。如果一个节点启动了 HTTP 服务，那么这个节点就可以被其他节点访问。
+
+
+
+
+
+### 一致性哈希
+
+一致性哈希算法是ron-cache从单节点走向分布式节点的一个重要的环节。
+
+
+
+
+
+### 分布式节点
+
+🔖
 
