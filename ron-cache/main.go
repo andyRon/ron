@@ -32,7 +32,7 @@ var db = map[string]string{
 func main() {
 	var port int
 	var api bool
-	flag.IntVar(&port, "port", 8001, "Geecache server port")
+	flag.IntVar(&port, "port", 8001, "roncache server port")
 	flag.BoolVar(&api, "api", false, "Start a api server?")
 	flag.Parse()
 
@@ -48,11 +48,11 @@ func main() {
 		addrs = append(addrs, v)
 	}
 
-	gee := createGroup()
+	ron := createGroup()
 	if api {
-		go startAPIServer(apiAddr, gee)
+		go startAPIServer(apiAddr, ron)
 	}
-	startCacheServer(addrMap[port], []string(addrs), gee)
+	startCacheServer(addrMap[port], []string(addrs), ron)
 }
 
 func createGroup() *roncache.Group {
@@ -66,19 +66,19 @@ func createGroup() *roncache.Group {
 		}))
 }
 
-func startCacheServer(addr string, addrs []string, gee *roncache.Group) {
+func startCacheServer(addr string, addrs []string, ron *roncache.Group) {
 	peers := roncache.NewHTTPPool(addr)
 	peers.Set(addrs...)
-	gee.RegisterPeers(peers)
+	ron.RegisterPeers(peers)
 	log.Println("roncache is running at", addr)
 	log.Fatal(http.ListenAndServe(addr[7:], peers))
 }
 
-func startAPIServer(apiAddr string, gee *roncache.Group) {
+func startAPIServer(apiAddr string, ron *roncache.Group) {
 	http.Handle("/api", http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			key := r.URL.Query().Get("key")
-			view, err := gee.Get(key)
+			view, err := ron.Get(key)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return

@@ -9,13 +9,13 @@ import (
 )
 
 func main() {
-	//sqlite3demo()
-	sessiondemo()
-
+	//sqlite3Demo()
+	//sessionDemo()
+	transactionDemo()
 }
 
-func sqlite3demo() {
-	db, _ := sql.Open("sqlite3", "gee.db")
+func sqlite3Demo() {
+	db, _ := sql.Open("sqlite3", "ron.db")
 	defer func() { _ = db.Close() }()
 	_, _ = db.Exec("DROP TABLE IF EXISTS User;")
 	_, _ = db.Exec("CREATE TABLE User(Name text);")
@@ -31,8 +31,8 @@ func sqlite3demo() {
 	}
 }
 
-func sessiondemo() {
-	engine, _ := ronorm.NewEngine("sqlite3", "gee.db")
+func sessionDemo() {
+	engine, _ := ronorm.NewEngine("sqlite3", "ron.db")
 	defer engine.Close()
 	s := engine.NewSession()
 	_, _ = s.Raw("DROP TABLE IF EXISTS User;").Exec()
@@ -41,4 +41,21 @@ func sessiondemo() {
 	result, _ := s.Raw("INSERT INTO User(`Name`) values (?), (?)", "Tom", "Sam").Exec()
 	count, _ := result.RowsAffected()
 	fmt.Printf("Exec success, %d affected\n", count)
+}
+
+func transactionDemo() {
+	db, _ := sql.Open("sqlite3", "ron.db")
+	defer func() { _ = db.Close() }()
+	_, _ = db.Exec("CREATE TABLE IF NOT EXISTS User(`Name` text);")
+
+	tx, _ := db.Begin()
+	_, err1 := tx.Exec("INSERT INTO User(`Name`) VALUES (?)", "Tom")
+	_, err2 := tx.Exec("INSERT INTO User(`Name`) VALUES (?)", "Jack")
+	if err1 != nil || err2 != nil {
+		_ = tx.Rollback()
+		log.Println("Rollback", err1, err2)
+	} else {
+		_ = tx.Commit()
+		log.Println("Commit")
+	}
 }
