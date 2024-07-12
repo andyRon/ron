@@ -178,5 +178,189 @@ curl "http://localhost:9999/login" -X POST -d 'username=geektutu&password=1234'
 
 ### 分布式节点
 
+- 注册节点(Register Peers)，借助一致性哈希算法选择节点。
+- 实现 HTTP 客户端，与远程节点的服务端通信。
+
+
+
+
+
+### 防止缓存击穿
+
+#### 缓存雪崩、缓存击穿与缓存穿透
+
+- ==缓存击穿==：一个存在的key，在缓存过期的一刻，同时有大量的请求，这些请求都会击穿到 DB ，造成瞬时DB请求量大、压力骤增。【热点数据】
+
+- ==缓存穿透==：查询一个不存在的数据，因为不存在则不会写到缓存中，所以每次都会去请求 DB，如果瞬间流量过大，穿透到 DB，导致宕机。
+
+- ==缓存雪崩==：缓存在同一时刻全部失效，造成瞬时DB请求量大、压力骤增，引起雪崩。缓存雪崩通常因为缓存服务器宕机、缓存的 key 设置了相同的过期时间等引起。
+
+
+
+### 使用Protobuf通信
+
+#### 为什么要使用 protobuf
+
+protobuf 即 Protocol Buffers，Google 开发的一种数据描述语言，是一种轻便高效的结构化数据存储格式，与语言、平台无关，可扩展可序列化。protobuf 以二进制方式存储，占用空间小。
+
 🔖
 
+
+
+
+
+## 3 ORM框架ron-orm
+
+### 关于ORM框架
+
+对象关系映射（Object Relational Mapping，简称ORM）是通过使用描述对象和数据库之间映射的元数据，将面向对象语言程序中的对象自动持久化到关系数据库中。
+
+对象和数据库之间映射关系：
+
+| 数据库              | 面向对象的编程语言  |
+| :------------------ | :------------------ |
+| 表(table)           | 类(class/struct)    |
+| 记录(record, row)   | 对象 (object)       |
+| 字段(field, column) | 对象属性(attribute) |
+
+```sql
+CREATE TABLE `User` (`Name` text, `Age` integer);
+INSERT INTO `User` (`Name`, `Age`) VALUES ("Tom", 18);
+SELECT * FROM `User`;
+```
+
+```go
+type User struct {
+    Name string
+    Age  int
+}
+
+orm.CreateTable(&User{})
+orm.Save(&User{"Tom", 18})
+var users []User
+orm.Find(&users)
+```
+
+ORM 框架相当于对象和数据库中间的一个桥梁，借助 ORM 可以避免写繁琐的 SQL 语言，仅仅通过操作具体的对象，就能够完成对关系型数据库的操作。
+
+> 如何实现一个 ORM 框架呢？
+
+- `CreateTable` 方法需要从参数 `&User{}` 得到对应的结构体的名称 User 作为表名，成员变量 Name, Age 作为列名，同时还需要知道成员变量对应的类型。
+- `Save` 方法则需要知道每个成员变量的值。
+- `Find` 方法仅从传入的空切片 `&[]User`，得到对应的结构体名也就是表名 User，并从数据库中取到所有的记录，将其转换成 User 对象，添加到切片中。
+
+如果这些方法只接受 User 类型的参数，那是很容易实现的。但是 ORM 框架是通用的，也就是说可以将任意合法的对象转换成数据库中的表和记录。例如：
+
+```go
+type Account struct {
+    Username string
+    Password string
+}
+
+orm.CreateTable(&Account{})
+```
+
+> 问题：如何根据任意类型的指针，得到其对应的结构体的信息。
+
+通过反射机制(reflect)，可以获取到对象对应的结构体名称，成员变量、方法等信息，例如：
+
+```go
+typ := reflect.Indirect(reflect.ValueOf(&Account{})).Type()
+fmt.Println(typ.Name()) // Account
+
+for i := 0; i < typ.NumField(); i++ {
+    field := typ.Field(i)
+    fmt.Println(field.Name) // Username Password
+}
+```
+
+- `reflect.ValueOf()` 获取指针对应的反射值。
+- `reflect.Indirect()` 获取指针指向的对象的反射值。
+- `(reflect.Type).Name()` 返回类名(字符串)。
+- `(reflect.Type).Field(i)` 获取第 i 个成员变量。
+
+> 除了对象和表结构/记录的映射以外，设计 ORM 框架还需要关注什么问题呢？
+
+1. MySQL，PostgreSQL，SQLite 等数据库的 SQL 语句是有区别的，ORM 框架如何在开发者不感知的情况下适配多种数据库？
+2. 如果对象的字段发生改变，数据库表结构能够自动更新，即是否支持数据库自动迁移(migrate)？
+3. 数据库支持的功能很多，例如事务(transaction)，ORM框架能实现哪些？
+4. ...
+
+
+
+#### 关于ron-orm
+
+数据库的特性非常多，简单的增删查改使用 ORM 替代 SQL 语句是没有问题的，但是也有很多特性难以用 ORM 替代，比如复杂的多表关联查询，ORM 也可能支持，但是基于性能的考虑，开发者自己写 SQL 语句很可能更高效。
+
+因此，设计实现一个 ORM 框架，就需要给功能特性排优先级了。
+
+https://github.com/go-gorm/gorm
+
+### database/sql基础
+
+
+
+#### database/sql 标准库
+
+- `Exec()` 用于执行 SQL 语句，如果是查询语句，不会返回相关的记录。所以查询语句通常使用 `Query()` 和 `QueryRow()`，前者可以返回多条记录，后者只返回一条记录。
+- `Exec()`、`Query()`、`QueryRow()` 接受1或多个入参，第一个入参是 SQL 语句，后面的入参是 SQL 语句中的占位符 `?` 对应的值，占位符一般用来防 SQL 注入。
+
+
+
+#### 实现一个简单的 log 库
+
+开发一个框架/库并不容易，详细的日志能够帮助我们快速地定位问题。
+
+log 标准库没有日志分级，不打印文件和行号。
+
+
+
+### 对象表结构映射
+
+- 使用 dialect 隔离不同数据库之间的差异，便于扩展。
+- 使用反射(reflect)获取任意 struct 对象的名称和字段，映射为数据中的表。
+- 数据库表的创建(create)、删除(drop)。
+
+#### 1️⃣Dialect
+
+SQL 语句中的类型和 Go 语言中的类型是不同的，例如Go 语言中的 `int`、`int8`、`int16` 等类型均对应 SQLite 中的 `integer` 类型。因此实现 ORM 映射的第一步，需要思考如何将 Go 语言的类型映射为数据库中的类型。
+
+同时，不同数据库支持的数据类型也是有差异的，即使功能相同，在 SQL 语句的表达上也可能有差异。ORM 框架往往需要兼容多种数据库，因此我们需要将差异的这一部分提取出来，每一种数据库分别实现，实现最大程度的复用和解耦。这部分代码称之为 `dialect`。
+
+
+
+#### 2️⃣Schema
+
+对象(object)和表(table)的转换
+
+
+
+
+
+#### 3️⃣Session
+
+Session 的核心功能是与数据库进行交互。因此，我们将数据库表的增/删操作实现在子包 session 中。
+
+
+
+
+
+### 记录新增和查询
+
+- 实现新增(insert)记录的功能。
+- 使用反射(reflect)将数据库的记录转换为对应的结构体实例，实现查询(select)功能。
+
+#### 1️⃣Clause构造SQL语句
+
+
+
+#### 2️⃣Insert功能
+
+
+
+后续所有构造 SQL 语句的方式都将与 `Insert` 中构造 SQL 语句的方式一致。分两步：
+
+1. 多次调用 `clause.Set()` 构造好每一个子句。
+2. 调用一次 `clause.Build()` 按照传入的顺序构造出最终的 SQL 语句。
+
+构造完成后，调用 `Raw().Exec()` 方法执行。
