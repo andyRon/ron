@@ -50,7 +50,7 @@ func TestSession_Limit(t *testing.T) {
 
 func TestSession_Update(t *testing.T) {
 	s := testRecordInit(t)
-	affected, _ := s.Where("Name = ?", "Tom").Update("Age", 30)
+	affected, _ := s.Where("name = ?", "Tom").Update("Age", 30)
 	u := &User{}
 	_ = s.OrderBy("Age DESC").First(u)
 
@@ -61,7 +61,7 @@ func TestSession_Update(t *testing.T) {
 
 func TestSession_DeleteAndCount(t *testing.T) {
 	s := testRecordInit(t)
-	affected, _ := s.Where("Name = ?", "Tom").Delete()
+	affected, _ := s.Where("name = ?", "Tom").Delete()
 	count, _ := s.Count()
 
 	if affected != 1 || count != 1 {

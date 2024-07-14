@@ -5,16 +5,17 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"ronrpc/ronrpc"
 	cl "ronrpc/ronrpc/client"
 	"ronrpc/ronrpc/codec"
+	"ronrpc/ronrpc/service"
 	"sync"
 	"time"
 )
 
 func main() {
 	//demo1()
-	demo2()
+	//demo2()
+	demo3()
 }
 
 func demo2() {
@@ -50,7 +51,7 @@ func demo1() {
 	defer func() { _ = conn.Close() }()
 
 	time.Sleep(time.Second)
-	_ = json.NewEncoder(conn).Encode(ronrpc.DefaultOption)
+	_ = json.NewEncoder(conn).Encode(service.DefaultOption)
 	cc := codec.NewGobCodec(conn)
 	for i := 0; i < 5; i++ {
 		h := &codec.Header{
@@ -65,12 +66,61 @@ func demo1() {
 	}
 }
 
+//func startServer(addr chan string) {
+//	l, err := net.Listen("tcp", ":0")
+//	if err != nil {
+//		log.Fatal("network error: ", err)
+//	}
+//	log.Println("start rpc server on", l.Addr())
+//	addr <- l.Addr().String()
+//	service.Accept(l)
+//}
+
+type Foo int
+
+type Args struct{ Num1, Num2 int }
+
+func (f Foo) Sum(args Args, reply *int) error {
+	*reply = args.Num1 + args.Num2
+	return nil
+}
+
 func startServer(addr chan string) {
+	var foo Foo
+	if err := service.Register(&foo); err != nil {
+		log.Fatal("register error:", err)
+	}
+	// pick a free port
 	l, err := net.Listen("tcp", ":0")
 	if err != nil {
-		log.Fatal("network error: ", err)
+		log.Fatal("network error:", err)
 	}
 	log.Println("start rpc server on", l.Addr())
 	addr <- l.Addr().String()
-	ronrpc.Accept(l)
+	service.Accept(l)
+}
+
+func demo3() {
+	log.SetFlags(0)
+	addr := make(chan string)
+	go startServer(addr)
+	client, _ := cl.Dial("tcp", <-addr)
+	defer func() { _ = client.Close() }()
+
+	time.Sleep(time.Second)
+	// send request & receive response
+	var wg sync.WaitGroup
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			args := &Args{Num1: i, Num2: i * i}
+			var reply int
+			if err := client.Call("Foo.Sum", args, &reply); err != nil {
+				log.Fatal("call Foo.Sum error:", err)
+			}
+			log.Printf("%d + %d = %d", args.Num1, args.Num2, reply)
+		}(i)
+	}
+	wg.Wait()
 }

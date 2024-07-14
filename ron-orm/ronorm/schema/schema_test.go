@@ -17,7 +17,7 @@ func TestParse(t *testing.T) {
 	if schema.Name != "User" || len(schema.Fields) != 2 {
 		t.Fatal("failed to parse User struct")
 	}
-	if schema.GetField("Name").Tag != "PRIMARY KEY" {
+	if schema.GetField("name").Tag != "PRIMARY KEY" {
 		t.Fatal("failed to parse primary key")
 	}
 }

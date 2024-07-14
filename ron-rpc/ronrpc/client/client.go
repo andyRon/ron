@@ -7,8 +7,8 @@ import (
 	"io"
 	"log"
 	"net"
-	"ronrpc/ronrpc"
 	"ronrpc/ronrpc/codec"
+	"ronrpc/ronrpc/service"
 	"sync"
 )
 
@@ -27,7 +27,7 @@ func (call *Call) done() {
 
 type Client struct {
 	cc       codec.Codec // 消息的编解码器
-	opt      *ronrpc.Option
+	opt      *service.Option
 	sending  sync.Mutex // 互斥锁，为了保证请求的有序发送，即防止出现多个请求报文混淆
 	header   codec.Header
 	mu       sync.Mutex
@@ -118,7 +118,7 @@ func (client *Client) receive() {
 	client.terminateCalls(err)
 }
 
-func NewClient(conn net.Conn, opt *ronrpc.Option) (*Client, error) {
+func NewClient(conn net.Conn, opt *service.Option) (*Client, error) {
 	f := codec.NewCodecFuncMap[opt.CodecType]
 	if f == nil {
 		err := fmt.Errorf("invalid codec type %s", opt.CodecType)
@@ -133,7 +133,7 @@ func NewClient(conn net.Conn, opt *ronrpc.Option) (*Client, error) {
 	return newClientCodec(f(conn), opt), nil
 }
 
-func newClientCodec(cc codec.Codec, opt *ronrpc.Option) *Client {
+func newClientCodec(cc codec.Codec, opt *service.Option) *Client {
 	client := &Client{
 		seq:     1,
 		cc:      cc,
@@ -144,22 +144,22 @@ func newClientCodec(cc codec.Codec, opt *ronrpc.Option) *Client {
 	return client
 }
 
-func parseOpions(opts ...*ronrpc.Option) (*ronrpc.Option, error) {
+func parseOpions(opts ...*service.Option) (*service.Option, error) {
 	if len(opts) == 0 || opts[0] == nil {
-		return ronrpc.DefaultOption, nil
+		return service.DefaultOption, nil
 	}
 	if len(opts) != 1 {
 		return nil, errors.New("number of options is more than 1")
 	}
 	opt := opts[0]
-	opt.MagicNumber = ronrpc.DefaultOption.MagicNumber
+	opt.MagicNumber = service.DefaultOption.MagicNumber
 	if opt.CodecType == "" {
-		opt.CodecType = ronrpc.DefaultOption.CodecType
+		opt.CodecType = service.DefaultOption.CodecType
 	}
 	return opt, nil
 }
 
-func Dial(network, address string, opts ...*ronrpc.Option) (client *Client, err error) {
+func Dial(network, address string, opts ...*service.Option) (client *Client, err error) {
 	opt, err := parseOpions(opts...)
 	if err != nil {
 		return nil, err
